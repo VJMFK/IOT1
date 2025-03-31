@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
-import gpiozero as gpio
+#import gpiozero as gpio
+from gpiozero.pins.factory import RPiGPIOFactory
 from gpiozero import LED
 import json
 import time
@@ -17,7 +18,8 @@ mqtt_client.loop_start()
 print("MQTT connected")
 
 #set up hardware
-red = gpio.LED(17)
+factory = RPiGPIOFactory()
+red = LED(17, pin_factory = factory)
 red.off()
 
 #still part2 reading temperature
