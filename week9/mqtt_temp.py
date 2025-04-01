@@ -1,7 +1,6 @@
 import paho.mqtt.client as mqtt
 import gpiozero as gpio
-#from gpiozero.pins.factory import RPiGPIOFactory
-#from gpiozero import LED
+from gpiozero import LED
 import json
 import time
 import glob
@@ -10,11 +9,12 @@ import glob
 id = "88617db2-7ed3-4245-ab3b-a5ef8a0f2a1e"
 client_name = id +"_temperature_client"
 client_telemetry_topic = id + "/telemetry"
+client_command_topic = id + "/commands" #part4
 
 #set up mqtt
 mqtt_client = mqtt.Client(client_name)
-mqtt_client.connect("test.mosquitto.org")
-mqtt_client.loop_start()
+#mqtt_client.connect("test.mosquitto.org")
+#mqtt_client.loop_start()
 print("MQTT connected")
 
 #set up hardware
@@ -42,6 +42,26 @@ def read_temp():
 	except Exception as e:
 		print(f"error reading temperature:{e}")
 		return None
+#handle incoming commands
+def handle_command(client, userdata, message):
+	try:
+		command = json.loads(message.payload.decode())
+		if "led_on" in command:
+			if command["led_on"]:
+				red.on()
+				print("led on")
+			else:
+				red.off()
+				print("led off")
+		print(f"command recieved: {payload}, LED{'ON' if red.value else 'OFF'}")
+	except json.JSONDecodeError:
+		print("error decoding command message")
+#subscribe
+mqtt_client.on_message = handle_command
+mqtt_client.subscribe(client_command_topic)
+mqtt_client.connect("test.mosquitto.org")
+mqtt_client.loop_start()
+
 
 #main loop
 try:
@@ -52,19 +72,15 @@ try:
 			telemetry = json.dumps({"temperature" : temperature})
 			print("sending telemetry:", telemetry)
 			mqtt_client.publish(client_telemetry_topic, telemetry)
-			#led on/off
-			if temperature > 25:
-				red.on()
-			else:
-				red.off()
+
 		time.sleep(3)
 except KeyboardInterrupt:
 	print("exiting")
+finally:
 	mqtt_client.loop_stop()
 	mqtt_client.disconnect()
 	red.off()
-finally:
-	red.off()
+	print("cleaning up")
 
 
 
