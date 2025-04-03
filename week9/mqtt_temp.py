@@ -42,24 +42,30 @@ def read_temp():
 	except Exception as e:
 		print(f"error reading temperature:{e}")
 		return None
+		
+		
 #handle incoming commands
 def handle_command(client, userdata, message):
 	try:
-		command = json.loads(message.payload.decode())
-		if "led_on" in command:
-			if command["led_on"]:
-				red.on()
-				print("led on")
-			else:
-				red.off()
-				print("led off")
-		print(f"command recieved: {payload}, LED{'ON' if red.value else 'OFF'}")
+		payload = json.loads(message.payload.decode())
+		print(f"Received command payload: {payload}")  # Debugging output
+
+		# Ensure led_on is correctly processed
+		if not payload.get("led_on", False):  
+			red.on()
+			print("LED OFF ") #circuit is inverted? weird
+		else:
+			red.off()
+			print("LED ON ")
 	except json.JSONDecodeError:
-		print("error decoding command message")
+		print("Error decoding command message")
+        
+        
 #subscribe
-mqtt_client.on_message = handle_command
-mqtt_client.subscribe(client_command_topic)
 mqtt_client.connect("test.mosquitto.org")
+mqtt_client.subscribe(client_command_topic)
+mqtt_client.on_message = handle_command
+
 mqtt_client.loop_start()
 
 
@@ -70,7 +76,7 @@ try:
 
 		if temperature is not None:
 			telemetry = json.dumps({"temperature" : temperature})
-			print("sending telemetry:", telemetry)
+			print(f"sending telemetry:", telemetry)
 			mqtt_client.publish(client_telemetry_topic, telemetry)
 
 		time.sleep(3)
